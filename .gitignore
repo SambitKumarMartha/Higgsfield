@@ -40,3 +40,14 @@ yarn-error.log*
 **/*.log
 package-lock.json
 **/*.bun
+/src/generated/prisma
+# Environment variables / Secrets
+.env
+
+# AI Agent & IDE configs
+.agents/
+.claude/
+.cursor/
+.devin/
+.windsurf/
+skills-lock.json
