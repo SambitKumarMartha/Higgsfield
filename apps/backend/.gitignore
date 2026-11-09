@@ -56,4 +56,6 @@ package-lock.json
 **/.devin/
 **/.windsurf/
 **/skills-lock.json
-**/prisma7.config.ts
+**/prisma7.config.tsgenerated/
+
+generated/
