@@ -1,5 +1,7 @@
 import express from "express";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { authenticateToken } from "./Authmiddleware";
 import {CreateUserSchema} from "./types"
 import { prisma } from "./db";
 const app = express();
@@ -70,33 +72,34 @@ app.post("/api/v1/signin", async(req, res) => {//for signing in
     });
     return;
   }
+  const token = jwt.sign({ id: existuser.id }, process.env.JWT_SECRET!);
   res.json({
     message: "you have successfully signin",
-    id: existuser.id
+    token:token
   })
 });
-app.post("/api/v1/avatar", (req, res) => {//to create a avatar
+app.post("/api/v1/avatar",authenticateToken, (req, res) => {//to create a avatar
     
 })
-app.get("/api/v1/avatar", (req, res) => {//to get all the createdavavtar
+app.get("/api/v1/avatar", authenticateToken,(req, res) => {//to get all the createdavavtar
     
 })
-app.get("/api/v1/avatar/:avatarId", (req, res) => {
+app.get("/api/v1/avatar/:avatarId",authenticateToken, (req, res) => {
   
 });
-app.post("/api/v1/video", (req, res) => {//to create a video
+app.post("/api/v1/video",authenticateToken, (req, res) => {//to create a video
     
 })
-app.get("/api/v1/video", (req, res) => {//to get all the created videos
+app.get("/api/v1/video",authenticateToken, (req, res) => {//to get all the created videos
 
 });
-app.get("/api/v1/video/:videoId", (req, res) => {
+app.get("/api/v1/video/:videoId",authenticateToken, (req, res) => {
 
 });
-app.get("/api/v1/me", (req, res) => {//to get profile details
+app.get("/api/v1/me",authenticateToken, (req, res) => {//to get profile details
     
 })
-app.get("api/v1/models", (req, res) => {//to know 
+app.get("/api/v1/models",authenticateToken, (req, res) => {//to know 
     
 })
 app.listen(3000, () => {
