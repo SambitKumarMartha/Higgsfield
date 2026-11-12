@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-function authenticateToken(req, res, next) {
+export function authenticateToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({
@@ -8,9 +8,7 @@ function authenticateToken(req, res, next) {
     }
     const token = authHeader.split(' ')[1];
    
-        const decoded = jwt.verify(token,process.env.JWT_SECRET!);
-        req.user = decoded;
+        const decoded = jwt.verify(token,process.env.JWT_SECRET!)  as { id: string };
+    res.locals.userId = decoded.id;
         next(); 
 }
-
-module.exports = authenticateToken;

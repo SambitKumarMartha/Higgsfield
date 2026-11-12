@@ -1,11 +1,15 @@
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import * as fs from "node:fs";
+import path from "node:path";
+import "dotenv/config";
+import { GoogleGenAI } from "@google/genai";
 import { authenticateToken } from "./Authmiddleware";
-import {CreateUserSchema} from "./types"
+import {CreateUserSchema,CreateAvatarSchema} from "./types"
 import { prisma } from "./db";
 const app = express();
-
+const ai = new GoogleGenAI({}); // automatically reads GEMINI_API_KEY from .env
 
 app.use(express.json());
 
@@ -78,9 +82,74 @@ app.post("/api/v1/signin", async(req, res) => {//for signing in
     token:token
   })
 });
-app.post("/api/v1/avatar",authenticateToken, (req, res) => {//to create a avatar
-    
-})
+app.post("/api/v1/avatar", authenticateToken, async (req, res) => {//to create a avatar
+  //step-1 validate the user input is name and url
+  const { success, data, error } = CreateAvatarSchema.safeParse(req.body);
+  if (!success) {
+    return res.status(409).json({
+      message: "invalid user input",
+      error: error.issues
+    });
+  }
+  //step-2 Download the image from the url
+  const imageReffered = await fetch(data.image);
+  if (!imageReffered.ok) {
+    return res.status(400).json({
+      message: "Couldn't Download image"
+    })
+  }
+  //step-3 find the image type from the respoonse header 
+  const mimetype = (imageReffered.headers.get("content-type") ?? "")//??""this refer if the ?? left side is empty it will but null which leads to crash so to avoid that we put a space there
+  if (!mimetype.startsWith("image/")) {
+    return res.status(400).json({
+      message: "The given URL is not a image link"
+    });
+  }
+  // Step-4 Convert bytes to base64 text: bytes-->base64 
+  const imagebytes = Buffer.from(await imageReffered.arrayBuffer());
+  const base64Image = imagebytes.toString("base64");
+  //Step-5 call Gemini
+  const imageGenration = await ai.interactions.create({
+    model: "gemini-2.5-flash-image",
+    input: [
+      {
+        type: "text",
+        text: "Using the given photo create generate a professional, high quality portrait of the same person, keeping their face identical",
+      },
+      {
+        type: "image",
+        mime_type: mimetype,
+        data: base64Image
+      }
+    ],
+  });
+  //Step-6 Get the generated image 
+  const generatedImage = imageGenration.output_image;
+  if (!generatedImage || !generatedImage.data) {
+    return res.status(500).json({
+      message: "Gemini did not return an image"
+    });
+  }
+  //step-7 Save in the database
+  const outputpath = path.join("generatedIMG", `${Date.now()}.png`);
+      fs.writeFileSync(outputpath, Buffer.from(generatedImage.data, "base64"));
+
+  //step-8 save in the database 
+  const avatar = await prisma.avatar.create({
+    data: {
+      name: data.name,
+      userId: res.locals.userId,
+      avatarImages: {
+        create: [
+          { type: "User", url: data.image },
+          { type: "Model", url: outputpath },
+        ],
+      }
+    },
+    include: { avatarImages: true },
+  });
+  res.json(avatar)
+});
 app.get("/api/v1/avatar", authenticateToken,(req, res) => {//to get all the createdavavtar
     
 })
