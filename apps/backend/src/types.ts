@@ -6,5 +6,5 @@ export const CreateUserSchema = z.object({
 });
 export const CreateAvatarSchema = z.object({
     name: z.string(),
-    image: z.url("must be a valid url")
+    image: z.url()
 });
