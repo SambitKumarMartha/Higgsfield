@@ -1,4 +1,4 @@
-import express from "express";
+import express, { response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import * as fs from "node:fs";
@@ -6,10 +6,10 @@ import path from "node:path";
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 import { authenticateToken } from "./Authmiddleware";
-import {CreateUserSchema,CreateAvatarSchema} from "./types"
+import {CreateUserSchema,CreateAvatarSchema,CreateVideoSchema} from "./types"
 import { prisma } from "./db";
 const app = express();
-const ai = new GoogleGenAI({}); // automatically reads GEMINI_API_KEY from .env
+const ai = new GoogleGenAI({ apiVersion: "v1beta" }); // automatically reads GEMINI_API_KEY from .env
 
 app.use(express.json());
 
@@ -110,18 +110,22 @@ app.post("/api/v1/avatar", authenticateToken, async (req, res) => {
   const imagebytes = Buffer.from(await imageReffered.arrayBuffer());
   const base64Image = imagebytes.toString("base64");
   //Step-5 call Gemini
-  const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-exp-image-generation",
-    contents: [
+  const response = await ai.interactions.create({
+    model: "gemini-2.5-flash-image",
+    input: [
+      { type: "text", text: data.prompt },
       {
-        text: "Using the given photo, generate a professional, high quality portrait of the same person, keeping their face identical",
+        type: "image",
+        data: base64Image,
+        mime_type: mimetype,
       },
-      { inlineData: { mimeType: mimetype, data: base64Image } },
     ],
+    response_format: {//ensure the model return image in the response insteas of anthying else 
+      type: "image",
+    },
   });
   //step-6 get the generated image
-  const parts = response.candidates?.[0]?.content?.parts ?? [];
-  const generatedBase64 = parts.find((p) => p.inlineData)?.inlineData?.data;
+  const generatedBase64=response.outputs?.find(o=>o.type==="image")?.data??response.output_image?.data;
   if (!generatedBase64) {
     res.status(500).json({ message: "Gemini did not return an image" });
     return;
@@ -152,7 +156,74 @@ app.get("/api/v1/avatar", authenticateToken,(req, res) => {//to get all the crea
 app.get("/api/v1/avatar/:avatarId",authenticateToken, (req, res) => {
   
 });
-app.post("/api/v1/video",authenticateToken, (req, res) => {//to create a video
+app.post("/api/v1/video", authenticateToken, (req, res) => {//to create a video
+  
+  app.post("/api/v1/generate-video", authenticateToken, async (req, res) => {
+    // Step-1: Validate user input with Zod
+    const { success, data, error } = CreateVideoSchema.safeParse(req.body);
+    if (!success) {
+      return res.status(409).json({
+        message: "invalid user input",
+        error: error.issues,
+      });
+    }
+
+    // Step-2: Use Promise.all and .map() to fetch and convert multiple images concurrently
+    const imageInputs = await Promise.all(
+      data.image.map(async (imageUrl) => {
+        const imageReffered = await fetch(imageUrl);
+        if (!imageReffered.ok) {
+          throw new Error(`Failed to download image from: ${imageUrl}`);
+        }
+
+        const mimetype =
+          imageReffered.headers.get("content-type") ?? "image/jpeg";
+        if (!mimetype.startsWith("image/")) {
+          throw new Error(`URL is not a valid image link: ${imageUrl}`);
+        }
+
+        const imagebytes = Buffer.from(await imageReffered.arrayBuffer());
+        return {
+          type: "image",
+          data: imagebytes.toString("base64"),
+          mime_type: mimetype,
+        };
+      }),
+    );
+
+    // Step-3: Pass the mapped images alongside your text prompt into Gemini Omni Flash
+    const interaction = await ai.interactions.create({
+      model: "gemini-omni-1.2-flash",
+      input: [
+        ...imageInputs, // Spreads all your processed reference images here
+        {
+          type: "text",
+          text:
+            data.prompt??"A smooth cinematic sequence incorporating these reference subjects.",
+        },
+      ],
+    });
+
+    // Step-4: Check if the model returned a video
+    if (!interaction.output_video?.data) {
+      return res.status(500).json({ message: "Gemini did not return a video" });
+    }
+
+    // Step-5: Save the generated video into your src/dumpedfolder
+    const dumpDir = path.join(process.cwd(), "src", "generatedIMG");
+    fs.mkdirSync(dumpDir, { recursive: true });
+
+    const outputpath = path.join(dumpDir, `video_${Date.now()}.mp4`);
+    fs.writeFileSync(
+      outputpath,
+      Buffer.from(interaction.output_video.data, "base64"),
+    );
+    return res.json({
+      success: true,
+      message: "Video generated successfully with reference images",
+      videoPath: outputpath,
+    });
+  });
     
 })
 app.get("/api/v1/video",authenticateToken, (req, res) => {//to get all the created videos

@@ -52,6 +52,7 @@ model AvatarVideo {
   width       Int
   height      Int
   status      AvatarVideoStatus
+  url         String
   avatarVideoReferences  AvatarVideoReference[]
   user         User     @relation(fields: [userId], references: [id])
 }
