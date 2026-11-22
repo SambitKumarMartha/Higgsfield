@@ -48,7 +48,7 @@ const video = [
 
 export function LandingPage() {
   return (
-    <div className="pt-6 px-14">
+    <div className="pt-10 px-14">
       <Carousel
         opts={{
           align: "start",
@@ -57,13 +57,13 @@ export function LandingPage() {
       >
         <CarouselContent>
           {video.map((V) => (
-            <CarouselItem key={V.url} className="basis-full basis-1/2 lg:basis-1/3">
+            <CarouselItem key={V.url} className="basis-full basis-1/3 lg:basis-1/4">
               <Video url={V.url} title={V.title} />
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        <CarouselPrevious className="text-white"/>
+        <CarouselNext className="text-white"/>
       </Carousel>
     </div>
   );
