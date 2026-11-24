@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 export function Signin() {
     return (
       <div className="flex h-screen">
@@ -5,25 +7,25 @@ export function Signin() {
           <h6 className="text-3xl font-bold">Log in ot Higgsfield Earn</h6>
           <h1 className="pb-10 pt-3">Sign in and continue creating</h1>
 
-          <form className="flex flex-col ">
-            <input
-              className="border rounded-lg px-12 py-2"
+          <form className="flex flex-col gap-4">
+            <Input
+              
               type="text"
               placeholder="Email"
             />
-            <input
-              className="border rounded-lg px-12 py-2"
+            <Input
+            
               type="text"
               placeholder="Password"
             />
-            <button className="border rounded-lg px-30 py-2 hover:cursor-pointer">
+            <Button variant={"outline"} className="hover:cursor-pointer">
               login
-            </button>
+            </Button>
           </form>
         </div>
         <div className="flex-1 flex text-white items-center justify-center ">
-          <button></button>
+          <Button></Button>
         </div>
-      </div>
+      </div>  
     );
 }

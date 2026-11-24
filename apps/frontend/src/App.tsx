@@ -7,9 +7,6 @@ import { Signup } from "./Pages/Signup";
 import { Dashboard } from "./Pages/Dashboard";
 import { VideoCreator } from "./Pages/VideoCreatos";
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
   QueryClientProvider,
   QueryClient,
 } from "@tanstack/react-query";
