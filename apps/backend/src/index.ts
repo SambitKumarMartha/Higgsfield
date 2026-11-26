@@ -238,6 +238,6 @@ app.get("/api/v1/me",authenticateToken, (req, res) => {//to get profile details
 app.get("/api/v1/models",authenticateToken, (req, res) => {//to know 
     
 })
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
